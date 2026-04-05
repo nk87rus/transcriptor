@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS public.users
 (
     id  bigint NOT NULL,
-    username text NOT NULL,
+    user_name text NOT NULL,
     CONSTRAINT users_pkey PRIMARY KEY (id),
     CONSTRAINT id_uniq UNIQUE (id)
 );

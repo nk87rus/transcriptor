@@ -82,3 +82,11 @@ func (p *PSQL) Exec(ctx context.Context, req string, args ...any) error {
 	_, err := p.conn.Exec(ctx, req, args...)
 	return err
 }
+
+func (p *PSQL) SelectRow(ctx context.Context, req string, args ...any) pgx.Row {
+	return p.conn.QueryRow(ctx, req, args...)
+}
+
+func (p *PSQL) SelectRows(ctx context.Context, req string, args ...any) (pgx.Rows, error) {
+	return p.conn.Query(ctx, req, args...)
+}
