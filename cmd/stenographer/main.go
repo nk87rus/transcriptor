@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/nk87rus/stenographer/internal/app"
+	"github.com/nk87rus/transcriptor/internal/app"
 )
 
 func main() {

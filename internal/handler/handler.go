@@ -3,31 +3,54 @@ package handler
 import (
 	"context"
 
-	"github.com/nk87rus/stenographer/internal/model"
+	"github.com/nk87rus/transcriptor/internal/model"
 )
 
 type RepoMgr interface {
 	RegisterUser(ctx context.Context, userID int64, userName string) error
-	GetMeetingsList(ctx context.Context) ([]model.MeetingsListItem, error)
-	GetMeeting(ctx context.Context, mID int64) (*model.Meeting, error)
+	GetTranscriptionsList(ctx context.Context) ([]model.TranscriptionListItem, error)
+	GetTranscription(ctx context.Context, mID int64) (*model.Transcription, error)
+	SaveTranscription(ctx context.Context, m *model.Transcription) error
+	SearchTranscriptions(ctx context.Context, wordList []string) ([]model.TranscriptionListItem, error)
+}
+
+type SpeechRecognizer interface {
+	Recognize(ctx context.Context, srcFile *model.AudioFile) ([]string, error)
 }
 
 type Handler struct {
 	repo RepoMgr
+	sr   SpeechRecognizer
 }
 
-func Init(storage RepoMgr) *Handler {
-	return &Handler{repo: storage}
+func Init(storage RepoMgr, sr SpeechRecognizer) *Handler {
+	return &Handler{repo: storage, sr: sr}
 }
 
 func (h *Handler) RegisterUser(ctx context.Context, userID int64, userName string) error {
 	return h.repo.RegisterUser(ctx, userID, userName)
 }
 
-func (h *Handler) GetMeetingsList(ctx context.Context) ([]model.MeetingsListItem, error) {
-	return h.repo.GetMeetingsList(ctx)
+func (h *Handler) GetTranscriptionsList(ctx context.Context) ([]model.TranscriptionListItem, error) {
+	return h.repo.GetTranscriptionsList(ctx)
 }
 
-func (h *Handler) GetMeeting(ctx context.Context, mID int64) (*model.Meeting, error) {
-	return h.repo.GetMeeting(ctx, mID)
+func (h *Handler) GetTranscription(ctx context.Context, mID int64) (*model.Transcription, error) {
+	return h.repo.GetTranscription(ctx, mID)
+}
+
+func (h *Handler) SearchTranscriptions(ctx context.Context, wordList []string) ([]model.TranscriptionListItem, error) {
+	return h.repo.SearchTranscriptions(ctx, wordList)
+}
+
+func (h *Handler) SaveTranscription(ctx context.Context, m *model.Transcription) error {
+	return h.repo.SaveTranscription(ctx, m)
+}
+
+func (h *Handler) RecognizeAudio(ctx context.Context, srcFile *model.AudioFile) ([]string, error) {
+	return h.sr.Recognize(ctx, srcFile)
+}
+
+func (h *Handler) RecognizeVoice(ctx context.Context, srcFile *model.AudioFile) ([]string, error) {
+	return h.sr.Recognize(ctx, srcFile)
 }

@@ -1,0 +1,111 @@
+package telegram
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/nk87rus/transcriptor/internal/model"
+	"github.com/rs/zerolog/log"
+	"go.senan.xyz/taglib"
+	tele "gopkg.in/telebot.v3"
+)
+
+type AudioHandler interface {
+	RecognizeAudio(ctx context.Context, srcFile *model.AudioFile) ([]string, error)
+	SaveTranscription(ctx context.Context, m *model.Transcription) error
+}
+
+func (tb *TeleBot) OnAudio(ctx tele.Context) error {
+	msg := Message{
+		MsgType: MsgAudio,
+		MsgCtx:  ctx,
+	}
+	tb.inChan <- msg
+
+	return nil
+}
+
+func (tb *TeleBot) OnVoice(ctx tele.Context) error {
+	msg := Message{
+		MsgType: MsgVoice,
+		MsgCtx:  ctx,
+	}
+	tb.inChan <- msg
+
+	return nil
+
+}
+
+type DataSource interface {
+	MediaFile() *tele.File
+	MediaType() string
+}
+
+func (tb *TeleBot) ProcessAudio(ctx context.Context, rawMsg Message) error {
+	var (
+		msg    = rawMsg.MsgCtx.Message()
+		sender = rawMsg.MsgCtx.Sender()
+	)
+
+	log.Debug().Int("ID", msg.ID).Str("UserName", sender.Username).Msg("обработка аудио")
+	defer log.Debug().Int("ID", msg.ID).Str("UserName", sender.Username).Msg("обработка аудио завершена")
+
+	var (
+		ds     DataSource
+		dsMIME string
+	)
+
+	switch rawMsg.MsgType {
+	case MsgAudio:
+		ds = msg.Audio
+		dsMIME = msg.Audio.MIME
+	case MsgVoice:
+		ds = msg.Voice
+		dsMIME = msg.Voice.MIME
+	default:
+		ds = nil
+		dsMIME = ""
+	}
+
+	if ds == nil {
+		return fmt.Errorf("не удалось получить аудиофайл")
+	}
+
+	srcFile := ds.MediaFile()
+	localFilePath, err := downloadFile(tb.bot, srcFile.FileID, ds.MediaType())
+	if err != nil {
+		return fmt.Errorf("ошибка скачивания аудио: %w", err)
+	}
+	log.Debug().Int("ID", msg.ID).Str("UserName", sender.Username).Str("tmpFile", localFilePath).Str("file", srcFile.FilePath).Msg("Файл успешно получен")
+	defer os.Remove(localFilePath)
+
+	dsTags, err := taglib.ReadTags(localFilePath)
+	fmt.Printf("%v\n", dsTags)
+
+	rcgResult, errRcg := tb.hdlr.RecognizeAudio(ctx, &model.AudioFile{
+		LocalFilePath: localFilePath,
+		Encoding:      "???", // PCM_S16LE, OPUS, MP3, FLAC, ALAW, MULAW
+		SampleRate:    8000,
+		MIME:          dsMIME,
+	})
+	if errRcg != nil {
+		return errRcg
+	}
+
+	m := model.Transcription{
+		Id:        int64(msg.ID),
+		TimeStamp: msg.Unixtime,
+		AuthorID:  sender.ID,
+		Data:      strings.Join(rcgResult, " "),
+	}
+
+	if errDB := tb.hdlr.SaveTranscription(ctx, &m); errDB != nil {
+		tb.outChan <- Response{MsgCtx: rawMsg.MsgCtx, Data: fmt.Sprintf("ошибка при сохранении результатов обработки в БД: %v", errDB)}
+	}
+
+	tb.outChan <- Response{MsgCtx: rawMsg.MsgCtx, Data: m.Data}
+
+	return nil
+}

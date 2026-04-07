@@ -4,13 +4,13 @@ import (
 	"context"
 	"os"
 
-	"github.com/nk87rus/stenographer/internal/config"
-	"github.com/nk87rus/stenographer/internal/handler"
+	"github.com/nk87rus/transcriptor/internal/config"
+	"github.com/nk87rus/transcriptor/internal/handler"
 
-	"github.com/nk87rus/stenographer/internal/logger"
-	"github.com/nk87rus/stenographer/internal/repository/psql"
-	"github.com/nk87rus/stenographer/internal/service/salutespeech"
-	"github.com/nk87rus/stenographer/internal/service/telegram"
+	"github.com/nk87rus/transcriptor/internal/logger"
+	"github.com/nk87rus/transcriptor/internal/repository/psql"
+	"github.com/nk87rus/transcriptor/internal/service/salutespeech"
+	"github.com/nk87rus/transcriptor/internal/service/telegram"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -18,12 +18,8 @@ type TaskProvider interface {
 	Run(context.Context) error
 }
 
-type SpeechRecognizer interface {
-}
-
 type App struct {
 	tp TaskProvider
-	sr SpeechRecognizer
 }
 
 func Init(ctx context.Context) (*App, error) {
@@ -39,17 +35,17 @@ func Init(ctx context.Context) (*App, error) {
 		return nil, errRepo
 	}
 
-	teleBot, errTR := telegram.InitBot(ctx, cfg.TaskProvToken, handler.Init(repo))
-	if errTR != nil {
-		return nil, errTR
-	}
-
 	salutSpeech, errSR := salutespeech.Init(ctx, cfg.SpeechRecKey)
 	if errSR != nil {
 		return nil, errSR
 	}
 
-	return &App{tp: teleBot, sr: salutSpeech}, nil
+	teleBot, errTR := telegram.InitBot(ctx, cfg.TaskProvToken, handler.Init(repo, salutSpeech))
+	if errTR != nil {
+		return nil, errTR
+	}
+
+	return &App{tp: teleBot}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {

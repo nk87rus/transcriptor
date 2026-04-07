@@ -5,6 +5,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -16,6 +18,7 @@ const procsCount = 2
 
 type Handler interface {
 	TextHandler
+	AudioHandler
 }
 
 type MessageType int
@@ -113,7 +116,6 @@ func (tb *TeleBot) Sender(ctx context.Context, senderID int) error {
 			log.Debug().Int("senderID", senderID).Msg("получен сигнал остановки. завершение работы отправителя")
 			return ctx.Err()
 		case resp := <-tb.outChan:
-
 			log.Debug().Int("senderID", senderID).Int("MsgID", resp.MsgCtx.Message().ID).Msg("получен ответ на сообщение")
 			if errSend := resp.MsgCtx.Send(resp.Data); errSend != nil {
 				log.Error().Int("senderID", senderID).Int("MsgID", resp.MsgCtx.Message().ID).Err(errSend)
@@ -134,14 +136,48 @@ func (tb *TeleBot) Processor(ctx context.Context, procID int) {
 			log.Debug().Int("prcoID", procID).Msg("получен сигнал остановки. завершение работы обработчика")
 			return
 		case msg := <-tb.inChan:
+			log.Debug().Int("prcoID", procID).Int("MsgID", msg.MsgCtx.Message().ID).Msg("в обработку поступило новое сообщение")
+
 			switch msg.MsgType {
 			case MsgText:
-				log.Debug().Int("prcoID", procID).Int("MsgID", msg.MsgCtx.Message().ID).Msg("в обработку поступило новое сообщение")
 				if err := tb.ProcessText(ctx, msg.MsgCtx); err != nil {
+					log.Error().Int("prcoID", procID).Err(err).Int("MsgID", msg.MsgCtx.Message().ID).Msg("ошибка при обработки сообщения")
+					tb.outChan <- Response{MsgCtx: msg.MsgCtx, Data: fmt.Sprintf("ошибка: %v", err.Error())}
+				}
+			case MsgAudio, MsgVoice:
+				if err := tb.ProcessAudio(ctx, msg); err != nil {
 					log.Error().Int("prcoID", procID).Err(err).Int("MsgID", msg.MsgCtx.Message().ID).Msg("ошибка при обработки сообщения")
 					tb.outChan <- Response{MsgCtx: msg.MsgCtx, Data: fmt.Sprintf("ошибка: %v", err.Error())}
 				}
 			}
 		}
 	}
+}
+
+func downloadFile(b *tele.Bot, fileID string, prefix string) (string, error) {
+	file, err := b.FileByID(fileID)
+	if err != nil {
+		return "", fmt.Errorf("не удалось получить информацию о файле: %w", err)
+	}
+
+	tmpFile, err := os.CreateTemp("", prefix+"_*."+fileExtension(file.FilePath))
+	if err != nil {
+		return "", fmt.Errorf("не удалось создать временный файл: %w", err)
+	}
+	defer tmpFile.Close()
+
+	if err := b.Download(&file, tmpFile.Name()); err != nil {
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("ошибка при скачивании: %w", err)
+	}
+
+	return tmpFile.Name(), nil
+}
+
+func fileExtension(filePath string) string {
+	ext := filepath.Ext(filePath)
+	if ext == "" {
+		return "bin"
+	}
+	return ext[1:]
 }

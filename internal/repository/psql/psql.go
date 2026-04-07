@@ -4,11 +4,12 @@ package psql
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	psqldrv "github.com/nk87rus/stenographer/internal/db/psql"
-	"github.com/nk87rus/stenographer/internal/model"
+	psqldrv "github.com/nk87rus/transcriptor/internal/db/psql"
+	"github.com/nk87rus/transcriptor/internal/model"
 )
 
 // PSQLDriver - описывает методы необходимые для взаимодействия с БД PostgreSQL
@@ -50,8 +51,8 @@ func (s *PSQLRepo) RegisterUser(ctx context.Context, userID int64, userName stri
 	return nil
 }
 
-func (s *PSQLRepo) GetMeetingsList(ctx context.Context) ([]model.MeetingsListItem, error) {
-	req := "SELECT id, ts, (SELECT user_name FROM public.users u WHERE u.id = m.user_id) as user_name FROM public.meetings m"
+func (s *PSQLRepo) GetTranscriptionsList(ctx context.Context) ([]model.TranscriptionListItem, error) {
+	req := "SELECT id, ts, (SELECT user_name FROM public.users u WHERE u.id = m.user_id) as user_name FROM public.transcriptions m"
 	ctxSelect, cancelSelect := context.WithTimeout(ctx, 5*time.Second)
 	defer cancelSelect()
 
@@ -60,12 +61,12 @@ func (s *PSQLRepo) GetMeetingsList(ctx context.Context) ([]model.MeetingsListIte
 		return nil, errDB
 	}
 
-	return pgx.CollectRows(rawData, pgx.RowToStructByName[model.MeetingsListItem])
+	return pgx.CollectRows(rawData, pgx.RowToStructByName[model.TranscriptionListItem])
 
 }
 
-func (s *PSQLRepo) GetMeeting(ctx context.Context, mID int64) (*model.Meeting, error) {
-	req := "SELECT id, ts, (SELECT user_name FROM public.users u WHERE u.id = m.user_id) as user_name, data FROM public.meetings m WHERE id = $1;"
+func (s *PSQLRepo) GetTranscription(ctx context.Context, mID int64) (*model.Transcription, error) {
+	req := "SELECT id, ts, (SELECT user_name FROM public.users u WHERE u.id = m.user_id) as user_name, data FROM public.transcriptions m WHERE id = $1;"
 	ctxSelect, cancelSelect := context.WithTimeout(ctx, 5*time.Second)
 	defer cancelSelect()
 
@@ -73,6 +74,31 @@ func (s *PSQLRepo) GetMeeting(ctx context.Context, mID int64) (*model.Meeting, e
 	if errDB != nil {
 		return nil, errDB
 	}
-	result, err := pgx.CollectOneRow(rawData, pgx.RowToStructByName[model.Meeting])
+	result, err := pgx.CollectOneRow(rawData, pgx.RowToStructByName[model.Transcription])
 	return &result, err
+}
+
+func (s PSQLRepo) SaveTranscription(ctx context.Context, m *model.Transcription) error {
+	req := "INSERT INTO public.transcriptions( id, ts, user_id, data) VALUES ($1, $2, $3, $4);"
+	ctxInsert, cancelInsert := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelInsert()
+
+	if err := s.db.Insert(ctxInsert, req, m.Id, m.TimeStamp, m.AuthorID, m.Data); err != nil {
+		return fmt.Errorf("SaveTranscription: %w", err)
+	}
+	return nil
+
+}
+
+func (s PSQLRepo) SearchTranscriptions(ctx context.Context, wordList []string) ([]model.TranscriptionListItem, error) {
+	req := "SELECT id, ts, (SELECT user_name FROM public.users u WHERE u.id = m.user_id) as user_name FROM public.transcriptions m WHERE data ~ '$1';"
+	ctxSelect, cancelSelect := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelSelect()
+
+	rawData, errDB := s.db.SelectRows(ctxSelect, req, strings.Join(wordList, "|"))
+	if errDB != nil {
+		return nil, errDB
+	}
+
+	return pgx.CollectRows(rawData, pgx.RowToStructByName[model.TranscriptionListItem])
 }

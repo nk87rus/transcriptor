@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-const address = "smartspeech.sber.ru"
+// const address = "smartspeech.sber.ru"
 
 type Tokenizer interface {
 	Get(context.Context) (string, error)

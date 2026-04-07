@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS public.meetings
+CREATE TABLE IF NOT EXISTS public.transcriptions
 (
     id bigint NOT NULL,
     ts bigint NOT NULL DEFAULT (EXTRACT(epoch FROM now()))::bigint,
@@ -17,5 +17,5 @@ CREATE TABLE IF NOT EXISTS public.meetings
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS public.meetings;
+DROP TABLE IF EXISTS public.transcriptions;
 -- +goose StatementEnd

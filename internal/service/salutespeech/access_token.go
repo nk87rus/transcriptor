@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	oauthURL       = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-	accessTokenTTL = 30 * time.Minute
-	scope          = "SALUTE_SPEECH_PERS"
+	oauthURL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
+	scope    = "SALUTE_SPEECH_PERS"
 )
 
 type Token struct {
