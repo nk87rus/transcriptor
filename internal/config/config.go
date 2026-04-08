@@ -9,7 +9,8 @@ import (
 
 type ConfigData struct {
 	TaskProvToken string `env:"TASK_PROVIDER_TOKEN"`
-	SpeechRecKey  string `env:"SPEECH_REC_KEY"`
+	SpeechRecKey  string `env:"SPEECH_RECOGNIZER_KEY"`
+	ChatKey       string `env:"CHAT_KEY"`
 	DBDSN         string `env:"DATABASE_DSN"`
 }
 
@@ -29,6 +30,10 @@ func InitConfig(args []string) (*ConfigData, error) {
 
 	if strings.TrimSpace(cfg.SpeechRecKey) == "" {
 		return nil, fmt.Errorf("не найден SPEECH_REC_TOKEN")
+	}
+
+	if strings.TrimSpace(cfg.SpeechRecKey) == "" {
+		return nil, fmt.Errorf("не найден CHAT_KEY")
 	}
 
 	return &cfg, nil

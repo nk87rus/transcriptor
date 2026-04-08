@@ -20,6 +20,7 @@ type TextHandler interface {
 	GetTranscriptionsList(ctx context.Context) ([]model.TranscriptionListItem, error)
 	GetTranscription(ctx context.Context, mID int64) (*model.Transcription, error)
 	SearchTranscriptions(ctx context.Context, wordList []string) ([]model.TranscriptionListItem, error)
+	AIChat(ctx context.Context, request string) (string, error)
 }
 
 func (tb *TeleBot) OnText(ctx tele.Context) error {
@@ -47,6 +48,7 @@ func (tb *TeleBot) ProcessText(ctx context.Context, msg tele.Context) error {
 		case "/find":
 			return tb.CmdFind(msg)
 		case "/chat":
+			return tb.CmdChat(msg)
 		default:
 			tb.outChan <- Response{MsgCtx: msg, Data: fmt.Sprintf("Команда %q не поддерживается", msg.Text())}
 		}
@@ -100,7 +102,7 @@ func (tb *TeleBot) CmdGet(ctx tele.Context) error {
 	}
 
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "📝 Встреча %d от %s\n", data.Id, time.Unix(data.TimeStamp, 0).String())
+	fmt.Fprintf(&sb, "📝 Транскрипция встречи %d от %s\n", data.Id, time.Unix(data.TimeStamp, 0).String())
 	fmt.Fprintf(&sb, "Автор: %s\n", data.Author)
 	sb.WriteString(strings.Repeat("-", 15) + "\n")
 	sb.WriteString(data.Data)
@@ -116,7 +118,7 @@ func (tb *TeleBot) CmdFind(ctx tele.Context) error {
 	}
 
 	var wordList []string
-	for _, w := range strings.Split(ctx.Message().Payload, ",") {
+	for w := range strings.SplitSeq(ctx.Message().Payload, ",") {
 		wordList = append(wordList, strings.TrimSpace(w))
 	}
 
@@ -144,6 +146,17 @@ func (tb *TeleBot) CmdFind(ctx tele.Context) error {
 	return nil
 }
 
-func HdlrCmdChat(c tele.Context) error {
-	return c.Send("запрос к GigaChat")
+func (tb *TeleBot) CmdChat(ctx tele.Context) error {
+	if ctx.Message().Payload == "" {
+		return fmt.Errorf("не найден текст запроса")
+	}
+
+	result, errHdlr := tb.hdlr.AIChat(tb.ctx, ctx.Message().Payload)
+	if errHdlr != nil {
+		return errHdlr
+	}
+
+	tb.outChan <- Response{MsgCtx: ctx, Data: result}
+
+	return nil
 }

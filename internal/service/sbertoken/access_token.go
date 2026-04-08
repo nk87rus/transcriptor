@@ -1,4 +1,4 @@
-package salutespeech
+package sbertoken
 
 import (
 	"context"
@@ -13,14 +13,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	oauthURL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-	scope    = "SALUTE_SPEECH_PERS"
-)
+const oauthURL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 
 type Token struct {
 	sync.Mutex
 	authKey string
+	scope   string
 	value   string
 }
 
@@ -29,8 +27,8 @@ type TokenData struct {
 	ExpiresAt int64  `json:"expires_at"`
 }
 
-func NewTokenManager(authKey string) *Token {
-	return &Token{authKey: authKey}
+func NewTokenManager(authKey, scope string) *Token {
+	return &Token{authKey: authKey, scope: scope}
 }
 
 func (at *Token) Get(ctx context.Context) (string, error) {
@@ -71,7 +69,7 @@ func (at *Token) Fetch(ctx context.Context) (*TokenData, error) {
 		SetHeader("Accept", "application/json").
 		SetHeader("RqUID", uuid.NewString()).
 		SetAuthScheme("Bearer").SetAuthToken(at.authKey).
-		SetFormData(map[string]string{"scope": scope}).
+		SetFormData(map[string]string{"scope": at.scope}).
 		SetResult(&result).
 		Post(oauthURL)
 	if err != nil {
@@ -79,7 +77,7 @@ func (at *Token) Fetch(ctx context.Context) (*TokenData, error) {
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return &result, fmt.Errorf("запрос токена завершился с кодом %s", resp.Status())
+		return &result, fmt.Errorf("запрос токена завершился с кодом %q: %q", resp.Status(), resp.String())
 	}
 
 	return &result, nil

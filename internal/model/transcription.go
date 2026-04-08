@@ -20,5 +20,5 @@ type TranscriptionListItem struct {
 }
 
 func (tli TranscriptionListItem) String() string {
-	return fmt.Sprintf("Встреча: %d Время: %s Автор: %s", tli.Id, time.Unix(tli.TimeStamp, 0).String(), tli.Author)
+	return fmt.Sprintf("Транскрипция встречи: %d Время: %s Автор: %s", tli.Id, time.Unix(tli.TimeStamp, 0).String(), tli.Author)
 }

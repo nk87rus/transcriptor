@@ -18,13 +18,18 @@ type SpeechRecognizer interface {
 	Recognize(ctx context.Context, srcFile *model.AudioFile) ([]string, error)
 }
 
-type Handler struct {
-	repo RepoMgr
-	sr   SpeechRecognizer
+type AIChat interface {
+	Chat(ctx context.Context, request string) (string, error)
 }
 
-func Init(storage RepoMgr, sr SpeechRecognizer) *Handler {
-	return &Handler{repo: storage, sr: sr}
+type Handler struct {
+	repo   RepoMgr
+	sr     SpeechRecognizer
+	aiChat AIChat
+}
+
+func Init(storage RepoMgr, sr SpeechRecognizer, aiChat AIChat) *Handler {
+	return &Handler{repo: storage, sr: sr, aiChat: aiChat}
 }
 
 func (h *Handler) RegisterUser(ctx context.Context, userID int64, userName string) error {
@@ -53,4 +58,8 @@ func (h *Handler) RecognizeAudio(ctx context.Context, srcFile *model.AudioFile) 
 
 func (h *Handler) RecognizeVoice(ctx context.Context, srcFile *model.AudioFile) ([]string, error) {
 	return h.sr.Recognize(ctx, srcFile)
+}
+
+func (h *Handler) AIChat(ctx context.Context, request string) (string, error) {
+	return h.aiChat.Chat(ctx, request)
 }

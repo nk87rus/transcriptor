@@ -8,25 +8,30 @@ import (
 	"testing"
 
 	"github.com/nk87rus/transcriptor/internal/model"
+	"github.com/nk87rus/transcriptor/internal/service/sbertoken"
 )
 
 const testAuthKey = "SECRET"
 
 func TestRecognize(t *testing.T) {
 	af := model.AudioFile{
-		LocalFilePath: "../../../test_data/voice_2013458933.oga",
+		// LocalFilePath: "../../../test_data/voice_2013458933.oga",
 		// LocalFilePath: "../../../test_data/questions_about_go2.ogg",
-		Encoding: "OPUS",
-		MIME:     "audio/ogg",
+		// Encoding: "OPUS",
+		// MIME:     "audio/ogg",
+
+		LocalFilePath: "../../../test_data/123.mp3",
+		Encoding:      "MP3",
+		MIME:          "audio/mpeg",
 	}
 
-	s := SaluteSpeechClient{token: NewTokenManager(testAuthKey)}
+	s := SaluteSpeechClient{token: sbertoken.NewTokenManager(testAuthKey, scope)}
 	resultDataFile, resultError := s.Recognize(t.Context(), &af)
 	if resultError != nil {
 		t.Fatal(resultError)
 	}
 
-	println(strings.Join(resultDataFile, " "))
+	println("---\n", strings.Join(resultDataFile, " "))
 }
 
 const (
@@ -37,7 +42,7 @@ const (
 )
 
 func TestCreateTask(t *testing.T) {
-	s := SaluteSpeechClient{token: NewTokenManager(testAuthKey)}
+	s := SaluteSpeechClient{token: sbertoken.NewTokenManager(testAuthKey, scope)}
 	resultData, resultError := s.createTask(t.Context(), reqID, fileID, "OPUS")
 	if resultError != nil {
 		t.Fatal(resultError)
@@ -48,7 +53,7 @@ func TestCreateTask(t *testing.T) {
 }
 
 func TestPolltask(t *testing.T) {
-	s := SaluteSpeechClient{token: NewTokenManager(testAuthKey)}
+	s := SaluteSpeechClient{token: sbertoken.NewTokenManager(testAuthKey, scope)}
 	resultData, resultError := s.pollTask(t.Context(), taskID)
 
 	if resultError != nil {
@@ -59,7 +64,7 @@ func TestPolltask(t *testing.T) {
 }
 
 func TestFetchResult(t *testing.T) {
-	s := SaluteSpeechClient{token: NewTokenManager(testAuthKey)}
+	s := SaluteSpeechClient{token: sbertoken.NewTokenManager(testAuthKey, scope)}
 	resultData, resultError := s.fetchResult(t.Context(), respFileID)
 	if resultError != nil {
 		t.Fatal(resultError)

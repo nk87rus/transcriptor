@@ -2,9 +2,11 @@ package salutespeech
 
 import (
 	"context"
+
+	"github.com/nk87rus/transcriptor/internal/service/sbertoken"
 )
 
-// const address = "smartspeech.sber.ru"
+const scope = "SALUTE_SPEECH_PERS"
 
 type Tokenizer interface {
 	Get(context.Context) (string, error)
@@ -15,9 +17,5 @@ type SaluteSpeechClient struct {
 }
 
 func Init(ctx context.Context, authKey string) (*SaluteSpeechClient, error) {
-	return &SaluteSpeechClient{token: NewTokenManager(authKey)}, nil
-}
-
-func (s SaluteSpeechClient) GetAccessToken(ctx context.Context) error {
-	return nil
+	return &SaluteSpeechClient{token: sbertoken.NewTokenManager(authKey, scope)}, nil
 }

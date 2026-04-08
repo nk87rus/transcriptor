@@ -9,6 +9,7 @@ import (
 
 	"github.com/nk87rus/transcriptor/internal/logger"
 	"github.com/nk87rus/transcriptor/internal/repository/psql"
+	"github.com/nk87rus/transcriptor/internal/service/gigachat"
 	"github.com/nk87rus/transcriptor/internal/service/salutespeech"
 	"github.com/nk87rus/transcriptor/internal/service/telegram"
 	"golang.org/x/sync/errgroup"
@@ -40,7 +41,12 @@ func Init(ctx context.Context) (*App, error) {
 		return nil, errSR
 	}
 
-	teleBot, errTR := telegram.InitBot(ctx, cfg.TaskProvToken, handler.Init(repo, salutSpeech))
+	gChat, errGCH := gigachat.Init(ctx, cfg.ChatKey)
+	if errGCH != nil {
+		return nil, errGCH
+	}
+
+	teleBot, errTR := telegram.InitBot(ctx, cfg.TaskProvToken, handler.Init(repo, salutSpeech, gChat))
 	if errTR != nil {
 		return nil, errTR
 	}
