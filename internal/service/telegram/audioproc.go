@@ -8,7 +8,6 @@ import (
 
 	"github.com/nk87rus/transcriptor/internal/model"
 	"github.com/rs/zerolog/log"
-	"go.senan.xyz/taglib"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -52,21 +51,14 @@ func (tb *TeleBot) ProcessAudio(ctx context.Context, rawMsg Message) error {
 	log.Debug().Int("ID", msg.ID).Str("UserName", sender.Username).Msg("обработка аудио")
 	defer log.Debug().Int("ID", msg.ID).Str("UserName", sender.Username).Msg("обработка аудио завершена")
 
-	var (
-		ds     DataSource
-		dsMIME string
-	)
-
+	var ds DataSource
 	switch rawMsg.MsgType {
 	case MsgAudio:
 		ds = msg.Audio
-		dsMIME = msg.Audio.MIME
 	case MsgVoice:
 		ds = msg.Voice
-		dsMIME = msg.Voice.MIME
 	default:
 		ds = nil
-		dsMIME = ""
 	}
 
 	if ds == nil {
@@ -81,15 +73,12 @@ func (tb *TeleBot) ProcessAudio(ctx context.Context, rawMsg Message) error {
 	log.Debug().Int("ID", msg.ID).Str("UserName", sender.Username).Str("tmpFile", localFilePath).Str("file", srcFile.FilePath).Msg("Файл успешно получен")
 	defer os.Remove(localFilePath)
 
-	dsTags, err := taglib.ReadTags(localFilePath)
-	fmt.Printf("%v\n", dsTags)
+	af, errAF := model.MakeAudioFile(localFilePath)
+	if errAF != nil {
+		return errAF
+	}
 
-	rcgResult, errRcg := tb.hdlr.RecognizeAudio(ctx, &model.AudioFile{
-		LocalFilePath: localFilePath,
-		Encoding:      "???", // PCM_S16LE, OPUS, MP3, FLAC, ALAW, MULAW
-		SampleRate:    8000,
-		MIME:          dsMIME,
-	})
+	rcgResult, errRcg := tb.hdlr.RecognizeAudio(ctx, af)
 	if errRcg != nil {
 		return errRcg
 	}

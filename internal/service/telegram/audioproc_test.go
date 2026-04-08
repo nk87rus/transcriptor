@@ -1,19 +1,15 @@
 package telegram
 
 import (
-	"fmt"
 	"testing"
-
-	"github.com/nbonaparte/audiotags"
 )
 
-var filePath = "../../../test_data/voice_2013458933.oga"
+var filePath = "../../../test_data/questions_about_go1.ogg"
 
-func TestTags(t *testing.T) {
-	props, audioProps, err := audiotags.Read(filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
+// var filePath = "../../../test_data/voice_2013458933.oga"
+// var filePath = "../../../test_data/big.mp3"
 
-	fmt.Printf("props: %+v\naProps: %+v\n", props, audioProps)
+func TestGetEncoding(t *testing.T) {
+	// resultData, resultError := getEncoding(filePath)
+	// fmt.Printf("res: %v\nerr: %v\n", resultData, resultError)
 }
